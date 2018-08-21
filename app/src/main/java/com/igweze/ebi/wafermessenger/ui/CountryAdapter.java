@@ -1,6 +1,7 @@
 package com.igweze.ebi.wafermessenger.ui;
 
 import android.support.annotation.NonNull;
+import android.support.constraint.ConstraintLayout;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,13 +41,30 @@ public class CountryAdapter extends RecyclerView.Adapter<CountryAdapter.CountryV
         return countries.size();
     }
 
+
+    public void removeCountry(int position) {
+        // remove item at position
+        countries.remove(position);
+        // notify the item removed at position
+        // to perform delete animations
+        notifyItemRemoved(position);
+    }
+
+    public void restoreCountry(Country country, int position) {
+        countries.add(position, country);
+        // notify item added by position
+        notifyItemInserted(position);
+    }
+
     public static class CountryViewHolder extends RecyclerView.ViewHolder {
-        private TextView countryName;
-        private TextView languageName;
-        private TextView currencyName;
+        public final ConstraintLayout foreground;
+        private final TextView countryName;
+        private final TextView languageName;
+        private final TextView currencyName;
 
         public CountryViewHolder(View view) {
             super(view);
+            foreground = view.findViewById(R.id.foreground);
             countryName = view.findViewById(R.id.countryName);
             languageName = view.findViewById(R.id.languageName);
             currencyName = view.findViewById(R.id.currencyName);
