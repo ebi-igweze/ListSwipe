@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Wafer Messenger</string>
+    <string name="title_currency">Currency:</string>
+    <string name="title_language">Language:</string>
+</resources>

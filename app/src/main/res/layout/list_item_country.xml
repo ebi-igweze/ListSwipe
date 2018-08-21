@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="15dp">
+
+    <TextView
+        android:id="@+id/countryName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        tools:text="@string/app_name" />
+
+    <TextView
+        android:id="@+id/languageTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/title_language"
+        android:layout_marginTop="5dp"
+        android:gravity="center_vertical"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/countryName" />
+
+    <TextView
+        android:id="@+id/languageName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:textSize="14sp"
+        android:layout_marginStart="5dp"
+        app:layout_constraintStart_toEndOf="@+id/languageTitle"
+        app:layout_constraintBottom_toBottomOf="@+id/languageTitle"
+        tools:text="@string/app_name" />
+
+    <TextView
+        android:id="@+id/currencyTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:text="@string/title_currency"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/languageTitle" />
+
+    <TextView
+        android:id="@+id/currencyName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="5dp"
+        android:gravity="center_vertical"
+        android:textSize="14sp"
+        app:layout_constraintStart_toEndOf="@+id/currencyTitle"
+        app:layout_constraintBottom_toBottomOf="@+id/currencyTitle"
+        tools:text="@string/app_name" />
+
+</android.support.constraint.ConstraintLayout>
