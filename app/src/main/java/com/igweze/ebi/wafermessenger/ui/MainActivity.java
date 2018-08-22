@@ -10,6 +10,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.TypedValue;
 import android.view.View;
 
 import com.igweze.ebi.wafermessenger.Functions.Function;
@@ -53,11 +54,12 @@ public class MainActivity extends AppCompatActivity implements SwipeTouchHelper.
             recyclerView.setAdapter(countryAdapter);
         });
 
-        int noDrag = 0;
-        int touchDirections = ItemTouchHelper.LEFT;
-        Function<ViewHolder, View> getForegroundView = viewHolder -> ((CountryViewHolder) viewHolder).foreground;
+        // button visible width in dp
+        int buttonDimensionAndPadding = 100;
+        // convert button dp dimensions to pixels
+        float buttonWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, buttonDimensionAndPadding, getResources().getDisplayMetrics());
         // create swipe touch helper with left swipe
-        SwipeTouchHelper touchHelper = new SwipeTouchHelper(noDrag, touchDirections, this, getForegroundView);
+        SwipeTouchHelper touchHelper = new SwipeTouchHelper( buttonWidth, this);
         // attach touch helper to recycler view
         new ItemTouchHelper(touchHelper).attachToRecyclerView(recyclerView);
     }

@@ -6,6 +6,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.igweze.ebi.wafermessenger.R;
@@ -56,7 +57,7 @@ public class CountryAdapter extends RecyclerView.Adapter<CountryAdapter.CountryV
         notifyItemInserted(position);
     }
 
-    public static class CountryViewHolder extends RecyclerView.ViewHolder {
+    public static class CountryViewHolder extends SwipeTouchHelper.SwipeTouchViewHolder {
         public final ConstraintLayout foreground;
         private final TextView countryName;
         private final TextView languageName;
@@ -69,6 +70,12 @@ public class CountryAdapter extends RecyclerView.Adapter<CountryAdapter.CountryV
             languageName = view.findViewById(R.id.languageName);
             currencyName = view.findViewById(R.id.currencyName);
         }
+
+        @Override
+        public View getForegroundView() {
+            return foreground;
+        }
+
 
         public void bindView(Country country) {
             countryName.setText(country.getName());

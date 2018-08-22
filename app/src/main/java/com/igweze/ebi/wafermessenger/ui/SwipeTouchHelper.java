@@ -1,6 +1,9 @@
 package com.igweze.ebi.wafermessenger.ui;
 
+import android.annotation.SuppressLint;
 import android.graphics.Canvas;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.MotionEvent;
@@ -16,26 +19,17 @@ enum ButtonState {
     VISIBLE
 }
 
-enum TouchType {
-    ALL,
-    UP,
-    DOWN,
-    NONE
-}
-
 public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
 
     private SwipeTouchHelperListener swipedListener;
-    private Function<RecyclerView.ViewHolder, View> getForegroundView;
     private ButtonState buttonShowedState = ButtonState.GONE;
     private boolean swipeBack = false;
-    private int buttonWidth = 300;
+    private float buttonWidth;
 
-
-    public SwipeTouchHelper(int dragDirs, int swipeDirs, SwipeTouchHelperListener swipedListener, Function<RecyclerView.ViewHolder, View> getForegroundView) {
-        super(dragDirs, swipeDirs);
+    public SwipeTouchHelper(float buttonWidth, SwipeTouchHelperListener swipedListener) {
+        super(0, ItemTouchHelper.LEFT);
         this.swipedListener = swipedListener;
-        this.getForegroundView = getForegroundView;
+        this.buttonWidth = buttonWidth;
     }
 
     @Override
@@ -46,7 +40,7 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
     @Override
     public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
         if (viewHolder != null) {
-            final View foregroundView = getForegroundView.apply(viewHolder);
+            final View foregroundView = getForegroundView(viewHolder);
             // detect ui changes for only foreground view
             getDefaultUIUtil().onSelected(foregroundView);
         }
@@ -60,7 +54,7 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
 
     @Override
     public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-        final View foregroundView = getForegroundView.apply(viewHolder);
+        final View foregroundView = getForegroundView(viewHolder);
         if (actionState == ACTION_STATE_SWIPE) {
             if (buttonShowedState == ButtonState.GONE) {
                 setTouchListener(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
@@ -73,11 +67,11 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
         if (buttonShowedState == ButtonState.GONE) {
             getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, dX, dY, actionState, isCurrentlyActive);
         }
-
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void setTouchListener(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-        recyclerView.setOnTouchListener((view, motionEvent) -> {
+        View.OnTouchListener touchListener = (view, motionEvent) -> {
             // set swipeBack flag
             swipeBack = motionEvent.getAction() == MotionEvent.ACTION_UP
                     || motionEvent.getAction() == MotionEvent.ACTION_CANCEL;
@@ -95,33 +89,54 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
                 }
             }
             return false;
-        });
+        };
+
+        // set touch listener for recyclerView
+        recyclerView.setOnTouchListener(touchListener);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void setTouchDownListener(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-        recyclerView.setOnTouchListener((v, event) -> {
+        View.OnTouchListener touchDownListener = (v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_DOWN) {
                 setTouchUpListener(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
             }
             return false;
-        });
+        };
+        // set touch listener as touchDown listener
+        recyclerView.setOnTouchListener(touchDownListener);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private void setTouchUpListener(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-        recyclerView.setOnTouchListener((v, event) -> {
+        View.OnTouchListener touchUpListener = (v, event) -> {
             if (event.getAction() == MotionEvent.ACTION_UP) {
-                final View foregroundView = getForegroundView.apply(viewHolder);
+                final View foregroundView = getForegroundView(viewHolder);
                 getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, 0F, dY, actionState, isCurrentlyActive);
 
                 // reset touch listener
                 recyclerView.setOnTouchListener((v1, event1) -> false);
-
+                // reset recycler view items to clickable
                 setItemsClickable(recyclerView, true);
+
+                View itemView = viewHolder.itemView;
+                // create bounding rectangle, the size of the visible button (in background)
+                RectF buttonRect = new RectF(itemView.getRight() - buttonWidth, itemView.getTop(), itemView.getRight(), itemView.getBottom());
+                // check if up event was within bounding rectangle
+                if (buttonRect.contains(event.getX(), event.getY()) && buttonShowedState == ButtonState.VISIBLE) {
+                    // initiate onSwiped on listener
+                    swipedListener.onSwiped(viewHolder, viewHolder.getAdapterPosition());
+                }
+
+                // reset button state and swipe back
                 buttonShowedState = ButtonState.GONE;
                 swipeBack = false;
             }
             return false;
-        });
+        };
+
+        // set touch listener to touchUp listener
+        recyclerView.setOnTouchListener(touchUpListener);
     }
 
     private void setItemsClickable(RecyclerView recyclerView, boolean isClickable) {
@@ -142,18 +157,34 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
 
     @Override
     public void onChildDrawOver(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-        final View foregroundView = getForegroundView.apply(viewHolder);
+        final View foregroundView = getForegroundView(viewHolder);
         getDefaultUIUtil().onDrawOver(c, recyclerView, foregroundView, dX, dY, actionState, isCurrentlyActive);
     }
 
     @Override
     public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
-        final View foregroundView = getForegroundView.apply(viewHolder);
+        final View foregroundView = getForegroundView(viewHolder);
         getDefaultUIUtil().clearView(foregroundView);
+    }
+
+    private View getForegroundView(RecyclerView.ViewHolder viewHolder) {
+        if (viewHolder instanceof SwipeTouchViewHolder) {
+            return ((SwipeTouchViewHolder) viewHolder).getForegroundView();
+        } else {
+            throw new IllegalArgumentException("viewHolder must be instance of 'SwipeTouchViewHolder'");
+        }
     }
 
     // swiped listener interface
     public interface SwipeTouchHelperListener {
         void onSwiped(RecyclerView.ViewHolder viewHolder, int position);
+    }
+
+    public static abstract class SwipeTouchViewHolder extends RecyclerView.ViewHolder {
+        public SwipeTouchViewHolder(View view) {
+            super(view);
+        }
+
+        public abstract View getForegroundView();
     }
 }
