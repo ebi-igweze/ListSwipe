@@ -8,11 +8,15 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.view.View;
 
+import com.igweze.ebi.wafermessenger.Functions.Function;
 import com.igweze.ebi.wafermessenger.R;
 import com.igweze.ebi.wafermessenger.models.Country;
 import com.igweze.ebi.wafermessenger.services.CountryService;
+import com.igweze.ebi.wafermessenger.ui.CountryAdapter.CountryViewHolder;
 
 import java.util.List;
 
@@ -39,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements SwipeTouchHelper.
         DividerItemDecoration itemDecoration = new DividerItemDecoration(this, layoutManager.getOrientation());
         recyclerView.addItemDecoration(itemDecoration);
 
+
         // get countries and handle response
         service.getCountries(countries -> {
             // set countries field
@@ -48,31 +53,31 @@ public class MainActivity extends AppCompatActivity implements SwipeTouchHelper.
             recyclerView.setAdapter(countryAdapter);
         });
 
+        int noDrag = 0;
+        int touchDirections = ItemTouchHelper.LEFT;
+        Function<ViewHolder, View> getForegroundView = viewHolder -> ((CountryViewHolder) viewHolder).foreground;
         // create swipe touch helper with left swipe
-        SwipeTouchHelper touchHelper = new SwipeTouchHelper(0, ItemTouchHelper.LEFT, this, v -> ((CountryAdapter.CountryViewHolder) v).foreground);
+        SwipeTouchHelper touchHelper = new SwipeTouchHelper(noDrag, touchDirections, this, getForegroundView);
         // attach touch helper to recycler view
         new ItemTouchHelper(touchHelper).attachToRecyclerView(recyclerView);
     }
 
     @Override
-    public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction, int position) {
+    public void onSwiped(ViewHolder viewHolder, int countryPosition) {
         if (viewHolder instanceof CountryAdapter.CountryViewHolder) {
-            // get country name for display in snack bar
-            String name = countries.get(viewHolder.getAdapterPosition()).getName();
-
-            // get the item position for item to be removed
-            final int deletedCountryPosition = viewHolder.getAdapterPosition();
             // retain removed country, for undo functionality
-            final Country deletedCountry = countries.get(deletedCountryPosition);
+            final Country deletedCountry = countries.get(countryPosition);
+            // get country name for display in snack bar
+            String name = deletedCountry.getName();
             // remove the item from recycler view
-            countryAdapter.removeCountry(deletedCountryPosition);
+            countryAdapter.removeCountry(countryPosition);
 
             // showing snack bar with Undo option
             Snackbar.make(coordinatorLayout, "'" + name + "' country was removed!", Snackbar.LENGTH_LONG)
                     .setActionTextColor(Color.YELLOW)
                     .setAction("UNDO", view -> {
                         // undo is selected, restore the deleted item
-                        countryAdapter.restoreCountry(deletedCountry, deletedCountryPosition);
+                        countryAdapter.restoreCountry(deletedCountry, countryPosition);
                     })
                     .show();
         }

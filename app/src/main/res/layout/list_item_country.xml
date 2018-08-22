@@ -9,7 +9,7 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/colorDanger"
+        android:background="@color/colorPrimaryBackground"
         android:gravity="end"
         android:padding="15dp">
 
