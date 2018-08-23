@@ -26,41 +26,19 @@ public class Promise<T> {
         this.startExecution(supplier);
     }
 
-    public Promise() {}
-
-    public void reject(String errorMessage) {
-        this.errorMessage = errorMessage;
-        Runnable completion = () -> {
-            for (Consumer<String> errorHandler : failureCallbacks) {
-                errorHandler.accept(errorMessage);
-            }
-        };
-
-        // call error handlers on main thread
-        PromiseExecutors.getInstance().getMainThread().execute(completion);
-    }
-
-    public void resolve(T result) {
-        this.result = result;
-
-        Runnable completion = () -> {
-            for (Consumer<T> successHandler : successCallbacks) {
-                successHandler.accept(result);
-            }
-        };
-
-        // call success handlers on main thread
-        PromiseExecutors.getInstance().getMainThread().execute(completion);
-    }
-
-    private void startExecution(Supplier<T> supplier) {
+    private void startExecution(Supplier<T> action) {
+        // get the executor instance
         PromiseExecutors instance = PromiseExecutors.getInstance();
+        // execute action in background thread
         instance.getBackgroundThread().execute(() -> {
+            // completion action to be
+            // executed on main thread
             Runnable completion;
             try {
-                result = supplier.get();
+                result = action.get();
                 this.isSuccess = true;
                 this.isCompleted = true;
+                // call success handlers
                 completion = () -> {
                     for (Consumer<T> successHandler : successCallbacks) {
                         successHandler.accept(result);
@@ -71,14 +49,15 @@ public class Promise<T> {
                 this.isSuccess = false;
                 this.isCompleted = true;
                 this.errorMessage = ex.getMessage();
+                // call failure handlers
                 completion = () -> {
-                    // call failure handlers
                     for (Consumer<String> handler : failureCallbacks) {
                         handler.accept(this.errorMessage);
                     }
                 };
             }
 
+            // execute completion on main thread
             instance.getMainThread().execute(completion);
         });
     }
