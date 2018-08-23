@@ -1,17 +1,82 @@
 package com.igweze.ebi.wafermessenger.services;
 
+import android.util.Log;
+
 import com.igweze.ebi.wafermessenger.Functions.Consumer;
 import com.igweze.ebi.wafermessenger.models.Country;
 import com.igweze.ebi.wafermessenger.models.Currency;
 import com.igweze.ebi.wafermessenger.models.Language;
 
+import org.json.JSONException;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CountryService {
+import javax.net.ssl.HttpsURLConnection;
 
-    public void getCountries(Consumer<List<Country>> listConsumer) {
-        listConsumer.accept(getMockCountries());
+public class CountryService {
+    private static String COUNRIES_URL = "https://restcountries.eu/rest/v2/all";
+
+    public Promise<List<Country>> getCountries() {
+        return new Promise<>(() -> {
+            String countriesAsString = getRestCountries();
+            // create default empty list
+            List<Country> countries = new ArrayList<>();
+            try {
+                countries = JsonConverter.toCountries(countriesAsString);
+            } catch (JSONException e) {
+                e.printStackTrace();
+                Log.e("CountryService", e.getMessage());
+            }
+
+            // return result
+            return countries;
+        });
+    }
+
+    private String getRestCountries() {
+        URL url;
+        HttpsURLConnection urlConnection = null;
+
+        try {
+            url = new URL(COUNRIES_URL);
+
+            // initialize https connection
+            urlConnection = (HttpsURLConnection) url.openConnection();
+            // set accept header
+            urlConnection.setRequestProperty("Accept", "application/json");
+
+            // check if response code is 200 OK.
+            if (urlConnection.getResponseCode() == HttpURLConnection.HTTP_OK) {
+                // get response input stream
+                InputStream responseBody = urlConnection.getInputStream();
+                // read stream into stream reader with specified charset
+                InputStreamReader responseBodyReader = new InputStreamReader(responseBody, "UTF-8");
+                BufferedReader streamReader = new BufferedReader(responseBodyReader);
+                // string builder to build JSON string
+                StringBuilder responseStrBuilder = new StringBuilder();
+
+                // get JSON String
+                String inputStr;
+                while ((inputStr = streamReader.readLine()) != null) {
+                    responseStrBuilder.append(inputStr);
+                }
+                return responseStrBuilder.toString();
+            } else {
+                throw new Exception("Connection error: " + urlConnection.getResponseCode());
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (urlConnection != null) urlConnection.disconnect();
+        }
+
+        return "";
     }
 
     private List<Country>  getMockCountries() {

@@ -10,6 +10,7 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 
@@ -46,12 +47,14 @@ public class MainActivity extends AppCompatActivity implements SwipeTouchHelper.
 
 
         // get countries and handle response
-        service.getCountries(countries -> {
+        service.getCountries().onsuccess(countries -> {
             // set countries field
             this.countries = countries;
             // create and set recycler adapter
             countryAdapter = new CountryAdapter(countries);
             recyclerView.setAdapter(countryAdapter);
+        }).onfailure(msg -> {
+            Log.e("MainActivity", msg);
         });
 
         // button visible width in dp
