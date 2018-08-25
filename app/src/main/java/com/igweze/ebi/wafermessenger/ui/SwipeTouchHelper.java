@@ -30,6 +30,7 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
     private SwipeTouchHelperListener swipedListener;
     private Runnable cancelCurrentSwipe = null;
     private float buttonWidth;
+    private boolean isSwiped;
 
     public SwipeTouchHelper(float buttonWidth, SwipeTouchHelperListener swipedListener) {
         super(0, ItemTouchHelper.LEFT);
@@ -45,6 +46,7 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
     @Override
     public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
         if (viewHolder != null) {
+            isSwiped = false;
             final View foregroundView = getForegroundView(viewHolder);
             // detect ui changes for only foreground view
             getDefaultUIUtil().onSelected(foregroundView);
@@ -63,6 +65,7 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
 
     @Override
     public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+        isSwiped = true;
         // reset state
         buttonTransition = ButtonTransition.CLOSED;
         buttonState = ButtonState.HIDDEN;
@@ -83,7 +86,7 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
                 // set the currentViewHolder
                 currentViewHodler = viewHolder;
                 // set transition to opening
-                buttonTransition = ButtonTransition.OPENING;
+                if (!isSwiped) buttonTransition = ButtonTransition.OPENING;
                 // set touch up listener on recycler view
                 setTouchListener(recyclerView, viewHolder);
             } else if (buttonTransition == ButtonTransition.OPENING) {
