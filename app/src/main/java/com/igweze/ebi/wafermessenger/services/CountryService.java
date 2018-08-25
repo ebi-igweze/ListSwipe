@@ -97,6 +97,18 @@ public class CountryService {
         array.add(country1);
         array.add(country2);
         array.add(country3);
+        array.add(country2);
+        array.add(country1);
+        array.add(country1);
+        array.add(country2);
+        array.add(country3);
+        array.add(country2);
+        array.add(country1);
+        array.add(country1);
+        array.add(country2);
+        array.add(country3);
+        array.add(country2);
+        array.add(country1);
 
         return array;
     }

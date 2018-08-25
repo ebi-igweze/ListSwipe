@@ -8,7 +8,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,10 +19,7 @@ public class JsonConverter {
     public static List<Country> toCountries(String countriesAsString) throws JSONException {
         List<Country> countries = new ArrayList<>();
 
-        if (countriesAsString == null || countriesAsString.isEmpty()) {
-
-        } else {
-
+        if (countriesAsString != null && !countriesAsString.isEmpty()) {
             JSONArray jsonArray = new JSONArray(countriesAsString);
             for (int i = 0; i < jsonArray.length(); i++) {
                 JSONObject jsonObject = jsonArray.getJSONObject(i);

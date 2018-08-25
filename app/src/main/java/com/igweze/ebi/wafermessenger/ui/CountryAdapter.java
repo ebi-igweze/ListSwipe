@@ -42,6 +42,10 @@ public class CountryAdapter extends RecyclerView.Adapter<CountryAdapter.CountryV
         return countries.size();
     }
 
+    public void setCountries(List<Country> countries) {
+        this.countries = countries;
+        notifyDataSetChanged();
+    }
 
     public void removeCountry(int position) {
         // remove item at position

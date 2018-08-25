@@ -9,6 +9,7 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import static android.support.v7.widget.helper.ItemTouchHelper.ACTION_STATE_SWIPE;
+import static android.support.v7.widget.helper.ItemTouchHelper.END;
 
 enum ButtonState {
     HIDDEN,
@@ -16,19 +17,19 @@ enum ButtonState {
 }
 
 enum ButtonTransition {
-    NONE,
-    CLOSING,
-    OPENING
+    OPENING,
+    OPENED,
+    CLOSED
 }
 
 public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
 
-    private SwipeTouchHelperListener swipedListener;
+    private ButtonTransition buttonTransition = ButtonTransition.CLOSED;
+    private RecyclerView.ViewHolder currentViewHodler = null;
     private ButtonState buttonState = ButtonState.HIDDEN;
-    private RecyclerView.ViewHolder currentViewHolder = null;
+    private SwipeTouchHelperListener swipedListener;
     private Runnable cancelCurrentSwipe = null;
     private float buttonWidth;
-    private ButtonTransition buttonTransition = ButtonTransition.NONE;
 
     public SwipeTouchHelper(float buttonWidth, SwipeTouchHelperListener swipedListener) {
         super(0, ItemTouchHelper.LEFT);
@@ -44,17 +45,6 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
     @Override
     public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
         if (viewHolder != null) {
-
-            // check if there is current visible button
-            if (viewHolder != currentViewHolder && buttonState == ButtonState.VISIBLE && cancelCurrentSwipe != null) {
-                // reset previous view holder state
-                cancelCurrentSwipe.run();
-                cancelCurrentSwipe = null;
-            }
-
-            // set current view holder
-            if (currentViewHolder != viewHolder) currentViewHolder = viewHolder;
-
             final View foregroundView = getForegroundView(viewHolder);
             // detect ui changes for only foreground view
             getDefaultUIUtil().onSelected(foregroundView);
@@ -68,52 +58,49 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
 
     @Override
     public float getSwipeEscapeVelocity(float defaultValue) {
-        return defaultValue * 3;
+        return defaultValue * 5;
     }
 
     @Override
     public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+        // reset state
+        buttonTransition = ButtonTransition.CLOSED;
+        buttonState = ButtonState.HIDDEN;
+        cancelCurrentSwipe = null;
         // Row is swiped from recycler view
         swipedListener.onSwiped(viewHolder, viewHolder.getAdapterPosition());
     }
 
     @Override
     public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
+        // get the foreground view, for swipe animation
         final View foregroundView = getForegroundView(viewHolder);
+
         if (actionState == ACTION_STATE_SWIPE) {
+            float swipeTo = dX;
             // if button is not currently visible, and swipe has passed button threshold
-            if (buttonTransition == ButtonTransition.NONE  && buttonState == ButtonState.HIDDEN && dX < -buttonWidth) {
+            if (buttonTransition == ButtonTransition.CLOSED && dX < -buttonWidth) {
+                // set the currentViewHolder
+                currentViewHodler = viewHolder;
+                // set transition to opening
                 buttonTransition = ButtonTransition.OPENING;
                 // set touch up listener on recycler view
-                setTouchUpListener(c, recyclerView, viewHolder);
+                setTouchListener(recyclerView, viewHolder);
             } else if (buttonTransition == ButtonTransition.OPENING) {
-                float swipeTo = dX;
-                if (buttonState == ButtonState.HIDDEN) {
-                    // set min distance to button width
-                    swipeTo = Math.min(swipeTo, -buttonWidth);
-                    // button is now visible (transition complete)
-                    if (swipeTo == -buttonWidth && dX == 0.0f)
-                        buttonState = ButtonState.VISIBLE;
-                } else if (buttonState == ButtonState.VISIBLE) {
-                    // swipe displacement combined with button width
-                    swipeTo = dX - buttonWidth;
-                    swipeTo = Math.min(swipeTo, -buttonWidth);
+                // set min distance to button width
+                swipeTo = Math.min(swipeTo, -buttonWidth);
+                // button is now visible (transition complete)
+                if (swipeTo == -buttonWidth && dX == 0.0f) {
+                    buttonState = ButtonState.VISIBLE;
+                    buttonTransition = ButtonTransition.OPENED;
                 }
-
-                getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, swipeTo, dY, actionState, isCurrentlyActive);
-            } else if (buttonTransition == ButtonTransition.CLOSING) {
-                if (dX == 0.0f) {
-                    buttonState = ButtonState.HIDDEN;
-                    buttonTransition = ButtonTransition.NONE;
-                }
-                // swipe displacement (combined with button width)
-                float swipeTo = -buttonWidth + dX;
-                getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, swipeTo, dY, actionState, isCurrentlyActive);
+            } else if (buttonTransition == ButtonTransition.OPENED && currentViewHodler == viewHolder) {
+                // swipe displacement combined with opened button width
+                swipeTo = dX - buttonWidth;
+                swipeTo = Math.min(swipeTo, -buttonWidth);
             }
-        }
 
-        if (buttonState == ButtonState.HIDDEN && buttonTransition == ButtonTransition.NONE) {
-            getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, dX, dY, actionState, isCurrentlyActive);
+            getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, swipeTo, dY, actionState, isCurrentlyActive);
         }
     }
 
@@ -124,39 +111,71 @@ public class SwipeTouchHelper extends ItemTouchHelper.SimpleCallback {
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private void setTouchUpListener(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+    private void setTouchListener(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+        // get foreground view
+        final View foregroundView = getForegroundView(viewHolder);
+
         // set previous swipe
         cancelCurrentSwipe = () -> {
-            final View foregroundView = getForegroundView(viewHolder);
-            getDefaultUIUtil().onDraw(c, recyclerView, foregroundView, 0, 0, ACTION_STATE_SWIPE, false);
+            foregroundView.animate().translationX(0).setDuration(200).start();
+            // close opened button
+            buttonTransition = ButtonTransition.CLOSED;
+            buttonState = ButtonState.HIDDEN;
+            // reset current swipe
+            cancelCurrentSwipe = null;
             // reset touch listener
             recyclerView.setOnTouchListener((v1, event1) -> false);
-            // begin close button transition
-            buttonTransition = ButtonTransition.CLOSING;
         };
+
+        // get itemView to calculate button view bounds
+        View itemView = viewHolder.itemView;
+
+        foregroundView.setOnClickListener(view -> {
+            // check if button is visible
+            boolean buttonIsVisible = buttonState == ButtonState.VISIBLE;
+            if (buttonIsVisible) {
+                // the foreground view was tapped
+                // so cancel current swipe
+                cancelCurrentSwipe.run();
+            }
+            // reset click listener
+            foregroundView.setOnClickListener(view1 -> {});
+        });
 
         // touch listener for touch up events.
         View.OnTouchListener touchUpListener = (v, event) -> {
-            if (event.getAction() == MotionEvent.ACTION_UP && buttonState == ButtonState.VISIBLE && buttonTransition == ButtonTransition.OPENING) {
-                // get itemView to calculate button view bounds
-                View itemView = viewHolder.itemView;
-                // calculate bounding rectangle, the size of the visible button (in background)
+            int eventAction = event.getAction();
+            boolean isActionDown = eventAction == MotionEvent.ACTION_DOWN;
+            boolean isActionMove = eventAction == MotionEvent.ACTION_MOVE;
+            boolean isActionPointerUp = eventAction == MotionEvent.ACTION_POINTER_UP;
+
+            // check if button is visible
+            boolean buttonIsVisible = buttonState == ButtonState.VISIBLE;
+
+            if (buttonIsVisible) {
+                if (isActionDown) {
+                    // calculate bounding rectangle, the size of the visible button (in background)
+                    RectF buttonRect = new RectF(itemView.getRight() - buttonWidth, itemView.getTop(), itemView.getRight(), itemView.getBottom());
+                    // check if up event was within bounding rectangle
+                    if (buttonRect.contains(event.getX(), event.getY())) {
+                        // cancel current swipe
+                        cancelCurrentSwipe.run();
+                        // notify item has been swiped
+                        onSwiped(viewHolder, END);
+                    }
+                }
+
+
+                // calculate bounding rectangle, the size of the visible foreground view
                 RectF foregroundRect = new RectF(itemView.getLeft() - buttonWidth, itemView.getTop(), itemView.getRight() - buttonWidth, itemView.getBottom());
-                // calculate bounding rectangle, the size of the visible button (in background)
-                RectF buttonRect = new RectF(itemView.getRight() - buttonWidth, itemView.getTop(), itemView.getRight(), itemView.getBottom());
-                // check if up event was within bounding rectangle
-                if (foregroundRect.contains(event.getX(), event.getY())) {
-                    // cancel current swipe
-                    cancelCurrentSwipe.run();
-                    // reset current swipe
-                    cancelCurrentSwipe = null;
-                } else if (buttonRect.contains(event.getX(), event.getY())) {
-                    // cancel current swipe
-                    cancelCurrentSwipe.run();
-                    // reset current swipe
-                    cancelCurrentSwipe = null;
-                    // initiate onSwiped on listener
-                    swipedListener.onSwiped(viewHolder, viewHolder.getAdapterPosition());
+                boolean isWithinForegroundView = foregroundRect.contains(event.getX(), event.getY());
+
+                if (isActionDown || isActionMove || isActionPointerUp) {
+                    if (!isWithinForegroundView && cancelCurrentSwipe != null) {
+                        // a new item is being swiped
+                        // so cancel current swipe
+                        cancelCurrentSwipe.run();
+                    }
                 }
             }
             return false;

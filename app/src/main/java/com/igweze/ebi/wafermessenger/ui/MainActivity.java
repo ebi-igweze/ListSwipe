@@ -20,11 +20,11 @@ import com.igweze.ebi.wafermessenger.models.Country;
 import com.igweze.ebi.wafermessenger.services.CountryService;
 import com.igweze.ebi.wafermessenger.ui.CountryAdapter.CountryViewHolder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements SwipeTouchHelper.SwipeTouchHelperListener {
 
-    private List<Country> countries;
     private CountryAdapter countryAdapter;
     private CoordinatorLayout coordinatorLayout;
 
@@ -38,6 +38,9 @@ public class MainActivity extends AppCompatActivity implements SwipeTouchHelper.
         // setup ui component
         coordinatorLayout = findViewById(R.id.rootLayout);
         RecyclerView recyclerView = findViewById(R.id.countryListView);
+        // create and set recycler adapter
+        countryAdapter = new CountryAdapter(new ArrayList<>());
+        recyclerView.setAdapter(countryAdapter);
         // set layout manager
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         recyclerView.setLayoutManager(layoutManager);
@@ -49,10 +52,7 @@ public class MainActivity extends AppCompatActivity implements SwipeTouchHelper.
         // get countries and handle response
         service.getCountries().onsuccess(countries -> {
             // set countries field
-            this.countries = countries;
-            // create and set recycler adapter
-            countryAdapter = new CountryAdapter(countries);
-            recyclerView.setAdapter(countryAdapter);
+            countryAdapter.setCountries(countries);
         }).onfailure(msg -> {
             Log.e("MainActivity", msg);
         });
@@ -70,21 +70,8 @@ public class MainActivity extends AppCompatActivity implements SwipeTouchHelper.
     @Override
     public void onSwiped(ViewHolder viewHolder, int countryPosition) {
         if (viewHolder instanceof CountryAdapter.CountryViewHolder) {
-            // retain removed country, for undo functionality
-            final Country deletedCountry = countries.get(countryPosition);
-            // get country name for display in snack bar
-            String name = deletedCountry.getName();
             // remove the item from recycler view
             countryAdapter.removeCountry(countryPosition);
-
-            // showing snack bar with Undo option
-            Snackbar.make(coordinatorLayout, "'" + name + "' country was removed!", Snackbar.LENGTH_LONG)
-                    .setActionTextColor(Color.YELLOW)
-                    .setAction("UNDO", view -> {
-                        // undo is selected, restore the deleted item
-                        countryAdapter.restoreCountry(deletedCountry, countryPosition);
-                    })
-                    .show();
         }
     }
 }
